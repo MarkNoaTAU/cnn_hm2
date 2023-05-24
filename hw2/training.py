@@ -95,8 +95,6 @@ class Trainer(abc.ABC):
 
             if early_stopping is not None and epochs_without_improvement > early_stopping:
                 break
-
-            raise NotImplementedError()
             # ========================
 
         return FitResult(actual_num_epochs,
