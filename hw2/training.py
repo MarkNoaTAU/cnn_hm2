@@ -1,13 +1,15 @@
 import abc
 import os
 import sys
+
+import numpy as np
 import tqdm
 import torch
 
 from torch.utils.data import DataLoader
 from typing import Callable, Any
 from pathlib import Path
-from helpers.train_results import BatchResult, EpochResult, FitResult
+from HW2.helpers.train_results import BatchResult, EpochResult, FitResult
 
 
 class Trainer(abc.ABC):
@@ -63,8 +65,7 @@ class Trainer(abc.ABC):
             if epoch % print_every == 0 or epoch == num_epochs-1:
                 verbose = True
             self._print(f'--- EPOCH {epoch+1}/{num_epochs} ---', verbose)
-
-            # TODO: Train & evaluate for one epoch
+            # Train & evaluate for one epoch
             # - Use the train/test_epoch methods.
             # - Save losses and accuracies in the lists above.
             # - Optional: Implement checkpoints. You can use torch.save() to
@@ -72,6 +73,29 @@ class Trainer(abc.ABC):
             # - Optional: Implement early stopping. This is a very useful and
             #   simple regularization technique that is highly recommended.
             # ====== YOUR CODE: ======
+            train_res = self.train_epoch(dl_train, **kw)
+            train_loss.extend(train_res.losses)
+            train_acc.append(train_res.accuracy)
+
+            test_res = self.test_epoch(dl_test, **kw)
+            test_loss.extend(test_res.losses)
+            test_acc.append(test_res.accuracy)
+
+            if best_acc is None or (test_res.accuracy > best_acc):
+                best_acc = test_res.accuracy
+                epochs_without_improvement = 0
+                if checkpoints is not None:
+                    # Save the best model (might be overide, and the specific epoch - sometime for stability taking
+                    # votes or mean over a few epochs is helping.)
+                    torch.save(self.model, f'{checkpoints}.pth')
+                    torch.save(self.model, f'{checkpoints}_epoch{epoch}.pth')
+
+            else:
+                epochs_without_improvement += 1
+
+            if early_stopping is not None and epochs_without_improvement > early_stopping:
+                break
+
             raise NotImplementedError()
             # ========================
 
@@ -182,13 +206,18 @@ class BlocksTrainer(Trainer):
     def train_batch(self, batch) -> BatchResult:
         X, y = batch
 
-        # TODO: Train the Block model on one batch of data.
+        # Train the PyTorch model on one batch of data.
         # - Forward pass
         # - Backward pass
         # - Optimize params
         # - Calculate number of correct predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        pred = self.model(X)
+        loss = self.loss_fn(pred, y)
+        loss.backward()
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+        num_correct = np.count_nonzero((pred == y).numpy())
         # ========================
 
         return BatchResult(loss, num_correct)
@@ -196,12 +225,15 @@ class BlocksTrainer(Trainer):
     def test_batch(self, batch) -> BatchResult:
         X, y = batch
 
-        # TODO: Evaluate the Block model on one batch of data.
-        # - Forward pass
-        # - Calculate number of correct predictions
-        # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
+        with torch.no_grad():
+            # Evaluate the PyTorch model on one batch of data.
+            # - Forward pass
+            # - Calculate number of correct predictions
+            # ====== YOUR CODE: ======
+            pred = self.model(X)
+            loss = self.loss_fn(pred, y)
+            num_correct = np.count_nonzero((pred == y).numpy())
+            # ========================
 
         return BatchResult(loss, num_correct)
 
@@ -216,13 +248,18 @@ class TorchTrainer(Trainer):
             X = X.to(self.device)
             y = y.to(self.device)
 
-        # TODO: Train the PyTorch model on one batch of data.
+        # Train the PyTorch model on one batch of data.
         # - Forward pass
         # - Backward pass
         # - Optimize params
         # - Calculate number of correct predictions
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        pred = self.model(X)
+        loss = self.loss_fn(pred, y)
+        loss.backward()
+        self.optimizer.step()
+        self.optimizer.zero_grad()
+        num_correct = np.count_nonzero((pred == y).numpy())
         # ========================
 
         return BatchResult(loss, num_correct)
@@ -234,11 +271,13 @@ class TorchTrainer(Trainer):
             y = y.to(self.device)
 
         with torch.no_grad():
-            # TODO: Evaluate the PyTorch model on one batch of data.
+            # Evaluate the PyTorch model on one batch of data.
             # - Forward pass
             # - Calculate number of correct predictions
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            pred = self.model(X)
+            loss = self.loss_fn(pred, y)
+            num_correct = np.count_nonzero((pred == y).numpy())
             # ========================
 
         return BatchResult(loss, num_correct)

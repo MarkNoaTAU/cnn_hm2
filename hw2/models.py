@@ -33,7 +33,8 @@ class MLP(Block):
 
         # TODO: Build the MLP architecture as described.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        # raise NotImplementedError()
+        pass
         # ========================
 
         self.sequence = Sequential(*blocks)
@@ -85,12 +86,19 @@ class ConvClassifier(nn.Module):
         in_channels, in_h, in_w, = tuple(self.in_size)
 
         layers = []
-        # TODO: Create the feature extractor part of the model:
         # [(Conv -> ReLU)*P -> MaxPool]*(N/P)
         # Use only dimension-preserving 3x3 convolutions. Apply 2x2 Max
         # Pooling to reduce dimensions.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        n = len(self.filters)
+        for i in range(n):
+            f = self.filters[i]
+            layers.append(nn.Conv2d(in_channels=in_channels, out_channels=f,  kernel_size=3, padding=1))
+            layers.append(nn.ReLU())
+            in_channels = f
+
+            if (i + 1) % self.pool_every == 0:
+                layers.append(nn.MaxPool2d(2))
 
         # ========================
         seq = nn.Sequential(*layers)
@@ -100,24 +108,39 @@ class ConvClassifier(nn.Module):
         in_channels, in_h, in_w, = tuple(self.in_size)
 
         layers = []
-        # TODO: Create the classifier part of the model:
         # (Linear -> ReLU)*M -> Linear
         # You'll need to calculate the number of features first.
         # The last Linear layer should have an output dimension of out_classes.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+
+        # Note that we use dimension-preserving 3x3 convolutions, except the 2x2 Max pooling,
+        # So in_h and in_w would be divided by 2 - pool_every times.
+        f_h, f_w = in_h / (2 ** self.pool_every), in_w / (2 ** self.pool_every)
+        f_c = self.filters[-1]
+        in_dim = int(f_h * f_w * f_c)
+        print(f"pool_every: {self.pool_every}, in_h: {in_h}, f_h: {f_h}, in_w: {in_w}, f_w: {f_w} f_c:{f_c}, in_dim: {in_dim}")
+
+        for hid_dim in self.hidden_dims:
+            layers.append(nn.Linear(in_dim, hid_dim))
+            layers.append(nn.ReLU())
+            in_dim = hid_dim
+        layers.append(nn.Linear(in_dim, self.out_classes))
+
         # ========================
         seq = nn.Sequential(*layers)
         return seq
 
     def forward(self, x):
-        # TODO: Implement the forward pass.
         # Extract features from the input, run the classifier on them and
         # return class scores.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        features = self.feature_extractor(x)
+        features = torch.flatten(features, start_dim=1)
+        cls_scores = self.classifier(features)
+        # out = F.log_softmax(cls_scores, dim=1) # out = F.softmax(cls_scores, dim=1)
+
         # ========================
-        return out
+        return cls_scores
 
 
 class YourCodeNet(ConvClassifier):
@@ -127,8 +150,10 @@ class YourCodeNet(ConvClassifier):
     # TODO: Change whatever you want about the ConvClassifier to try to
     # improve it's results on CIFAR-10.
     # For example, add batchnorm, dropout, skip connections, change conv
+    # (Clip grad after backward?)
     # filter sizes etc.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    # raise NotImplementedError()
+    pass
     # ========================
 
