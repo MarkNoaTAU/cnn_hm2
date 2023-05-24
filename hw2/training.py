@@ -197,41 +197,46 @@ class Trainer(abc.ABC):
         return EpochResult(losses=losses, accuracy=accuracy)
 
 
+
 class BlocksTrainer(Trainer):
+    # TODO: Check with Yael what about this class
+
     def __init__(self, model, loss_fn, optimizer):
         super().__init__(model, loss_fn, optimizer)
-
     def train_batch(self, batch) -> BatchResult:
         X, y = batch
 
-        # Train the PyTorch model on one batch of data.
+        # Train the Block model on one batch of data.
         # - Forward pass
         # - Backward pass
         # - Optimize params
         # - Calculate number of correct predictions
         # ====== YOUR CODE: ======
-        pred = self.model(X)
-        loss = self.loss_fn(pred, y)
-        loss.backward()
-        self.optimizer.step()
         self.optimizer.zero_grad()
-        num_correct = np.count_nonzero((pred == y).numpy())
+        z=self.model(X)
+        before = self.model.params().copy()
+        loss = self.loss_fn(z,y)
+        #dout = self.loss_fn.backward(loss)
+        dout = self.loss_fn.backward()
+        self.model.backward(dout)
+        self.optimizer.step()
+        z = torch.argmax(z,axis=1)
+        num_correct = torch.sum(z == y)
         # ========================
-
         return BatchResult(loss, num_correct)
 
     def test_batch(self, batch) -> BatchResult:
         X, y = batch
 
-        with torch.no_grad():
-            # Evaluate the PyTorch model on one batch of data.
-            # - Forward pass
-            # - Calculate number of correct predictions
-            # ====== YOUR CODE: ======
-            pred = self.model(X)
-            loss = self.loss_fn(pred, y)
-            num_correct = np.count_nonzero((pred == y).numpy())
-            # ========================
+        # Evaluate the Block model on one batch of data.
+        # - Forward pass
+        # - Calculate number of correct predictions
+        # ====== YOUR CODE: ======
+        z=self.model(X)
+        loss = self.loss_fn(z,y)
+        z=torch.argmax(z,axis=1)
+        num_correct=torch.sum(z==y)
+        # ========================
 
         return BatchResult(loss, num_correct)
 
@@ -257,10 +262,11 @@ class TorchTrainer(Trainer):
         loss.backward()
         self.optimizer.step()
         self.optimizer.zero_grad()
-        num_correct = np.count_nonzero((pred == y).numpy())
+        output = torch.argmax(pred, dim=1)
+        num_correct = torch.sum(output == y)
         # ========================
 
-        return BatchResult(loss, num_correct)
+        return BatchResult(loss.item(), num_correct.item())
 
     def test_batch(self, batch) -> BatchResult:
         X, y = batch
@@ -275,7 +281,8 @@ class TorchTrainer(Trainer):
             # ====== YOUR CODE: ======
             pred = self.model(X)
             loss = self.loss_fn(pred, y)
-            num_correct = np.count_nonzero((pred == y).numpy())
+            output = torch.argmax(pred, dim=1)
+            num_correct = torch.sum(output == y)
             # ========================
 
-        return BatchResult(loss, num_correct)
+        return BatchResult(loss.item(), num_correct.item())

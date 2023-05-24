@@ -4,6 +4,7 @@ import os
 import random
 import sys
 import json
+import numpy as np
 
 import torch
 import torchvision
@@ -11,7 +12,7 @@ import torchvision
 from torch.utils.data import DataLoader
 from torchvision.datasets import CIFAR10
 
-from helpers.train_results import FitResult
+from cnn_hm2.helpers.train_results import FitResult
 from . import models
 from . import training
 
@@ -47,7 +48,7 @@ def run_experiment(run_name, out_dir='./results', seed=None,
     # Select model class (experiment 1 or 2)
     model_cls = models.ConvClassifier if not ycn else models.YourCodeNet
 
-    # TODO: Train
+    # Train
     # - Create model, loss, optimizer and trainer based on the parameters.
     #   Use the model you've implemented previously, cross entropy loss and
     #   any optimizer that you wish.
@@ -56,7 +57,35 @@ def run_experiment(run_name, out_dir='./results', seed=None,
     #  for you automatically.
     fit_res = None
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+
+    dl_train = torch.utils.data.DataLoader(ds_train, batch_size=bs_train, shuffle=True)
+    dl_test = torch.utils.data.DataLoader(ds_test, batch_size=bs_train, shuffle=False)
+
+    filters = list(np.repeat(filters_per_layer, layers_per_block))
+    x0, _ = ds_train[0]
+    in_size = x0.shape
+    out_classes = 10
+    model_kw = dict()
+
+    model = model_cls(in_size, out_classes, filters, pool_every, hidden_dims, **model_kw)
+    loss_fn = torch.nn.CrossEntropyLoss()
+
+    # Setting the optimizer: (according to kw)
+    momentum = kw.get('momentum', 0.0)
+    opt_type = kw.get('opt_type', 'SGD')
+
+    if opt_type == 'SGD':
+        optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=reg)
+    elif opt_type == 'Adam':
+        optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=reg)
+    elif opt_type == 'RMSprop':
+        optimizer = torch.optim.RMSprop(model.parameters(),  lr=lr, momentum=momentum, weight_decay=reg)
+    else:
+        raise ValueError(f"Error! Optimization Algorithm {opt_type} not supported. Only: SGD, Adam or RMSprop")
+
+    trainer = training.TorchTrainer(model, loss_fn, optimizer, device)
+    fit_res = trainer.fit(dl_train, dl_test, epochs, checkpoints, early_stopping, print_every=1, max_batches=batches)
+
     # ========================
 
     save_experiment(run_name, out_dir, cfg, fit_res)
@@ -134,6 +163,12 @@ def parse_cli():
                         metavar='H', required=True)
     sp_exp.add_argument('--ycn', action='store_true', default=False,
                         help='Whether to use your custom network')
+
+    # Add optional parameters such as opt_type, momentum, so on.
+    sp_exp.add_argument('--opt_type', type=str, default='SGD',
+                        help='Optimizer type: SGD, ADAM or RMSprop')
+    sp_exp.add_argument('--momentum', type=float, default=0.0,
+                        help='Momentum parameter for optimization algorithm')
 
     parsed = p.parse_args()
 
