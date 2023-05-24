@@ -9,7 +9,7 @@ import torch
 from torch.utils.data import DataLoader
 from typing import Callable, Any
 from pathlib import Path
-from HW2.helpers.train_results import BatchResult, EpochResult, FitResult
+from cnn_hm2.helpers.train_results import BatchResult, EpochResult, FitResult
 
 
 class Trainer(abc.ABC):
