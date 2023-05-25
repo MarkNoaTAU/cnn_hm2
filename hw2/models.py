@@ -145,7 +145,7 @@ class ConvClassifier(nn.Module):
 
 
 class YourCodeNet(ConvClassifier):
-    def __init__(self, in_size, out_classes, filters, pool_every, hidden_dims, block_size):
+    def __init__(self, in_size, out_classes, filters, pool_every, hidden_dims):
         super().__init__(in_size, out_classes, filters, pool_every, hidden_dims)
 
     # TODO: Change whatever you want about the ConvClassifier to try to
