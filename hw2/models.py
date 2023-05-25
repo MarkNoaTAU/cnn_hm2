@@ -112,13 +112,12 @@ class ConvClassifier(nn.Module):
         # You'll need to calculate the number of features first.
         # The last Linear layer should have an output dimension of out_classes.
         # ====== YOUR CODE: ======
-
         # Note that we use dimension-preserving 3x3 convolutions, except the 2x2 Max pooling,
         # So in_h and in_w would be divided by 2 - pool_every times.
-        f_h, f_w = in_h / (2 ** self.pool_every), in_w / (2 ** self.pool_every)
+        number_of_pooling = int(len(self.filters) / self.pool_every)
+        f_h, f_w = in_h / (2 ** number_of_pooling), in_w / (2 ** number_of_pooling)
         f_c = self.filters[-1]
         in_dim = int(f_h * f_w * f_c)
-        print(f"pool_every: {self.pool_every}, in_h: {in_h}, f_h: {f_h}, in_w: {in_w}, f_w: {f_w} f_c:{f_c}, in_dim: {in_dim}")
 
         for hid_dim in self.hidden_dims:
             layers.append(nn.Linear(in_dim, hid_dim))
@@ -149,7 +148,7 @@ class YourCodeNet(ConvClassifier):
 
     # TODO: Change whatever you want about the ConvClassifier to try to
     # improve it's results on CIFAR-10.
-    # For example, add batchnorm, dropout, skip connections, change conv
+    # For example, add batchnorm, dropout, skip connections, change conv: Add stride and padding...
     # (Clip grad after backward?)
     # filter sizes etc.
     # ====== YOUR CODE: ======
