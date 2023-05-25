@@ -68,6 +68,7 @@ def run_experiment(run_name, out_dir='./results', seed=None,
     model_kw = dict()
 
     model = model_cls(in_size, out_classes, filters, pool_every, hidden_dims, **model_kw)
+    print(f"Model: {model}")
     loss_fn = torch.nn.CrossEntropyLoss()
 
     # Setting the optimizer: (according to kw)
