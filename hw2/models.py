@@ -145,14 +145,63 @@ class ConvClassifier(nn.Module):
 class YourCodeNet(ConvClassifier):
     def __init__(self, in_size, out_classes, filters, pool_every, hidden_dims):
         super().__init__(in_size, out_classes, filters, pool_every, hidden_dims)
-
     # TODO: Change whatever you want about the ConvClassifier to try to
     # improve it's results on CIFAR-10.
     # For example, add batchnorm, dropout, skip connections, change conv: Add stride and padding...
-    # (Clip grad after backward?)
     # filter sizes etc.
     # ====== YOUR CODE: ======
-    # raise NotImplementedError()
-    pass
-    # ========================
+
+    """
+        We observed in the training of ConvClassifier the following main problem:
+        1. For relatively shallow and large net, we saw over-fitting. 
+        2. In dipper network we got the problem of vanishing gradient. 
+        
+        We will build a simplified version of Resnet architector, which solved the vanishing gradient problem using
+        skip-connection and batch norm (note that batch-norm add some regularization as well).
+        
+        We will also add an optional dropout layer, to deal with overwriting.
+    """
+
+    def _make_feature_extractor(self):
+        # will return a list of Residual-blocks on them, we will iterate.
+        # Note there is no activation function (Relu) in the end of every block.
+        in_channels, _, _, = tuple(self.in_size)
+        blocks = []
+
+        i = 0
+        for b in range(int(len(self.filters) / 2)):
+            # The block:
+            # (Possibly Polling) -> (Conv -> BatchNorm -> ReLU -> Conv -> BatchNorm)
+            layers = []
+            if (i + 1) % self.pool_every == 0:
+                layers.append(nn.MaxPool2d(2))
+            f = self.filters[i]
+            layers.append(nn.Conv2d(in_channels=in_channels, out_channels=f, kernel_size=3, padding=1))
+            layers.append(nn.BatchNorm2d(f))
+            layers.append(nn.ReLU())
+            in_channels = f
+            i += 1
+
+            f = self.filters[i]
+            layers.append(nn.Conv2d(in_channels=in_channels, out_channels=f, kernel_size=3, padding=1))
+            layers.append(nn.BatchNorm2d(f))
+            in_channels = f
+            i += 1
+            blocks.append(nn.Sequential(*layers))
+
+        def _extract_feature(x):
+            out = x
+            for func in blocks:
+                f_x = func(out)
+                if f_x.shape != x.shape:
+                    raise NotImplementedError("Error! Please select the hyperparameter of the model such "
+                                              "that the residual connection will be in the same size."
+                                              "In Pytorch, they do support non-equal dimension using 1x1 conv, "
+                                              "but we currently not. \n")
+                out = func(out) + out
+
+            return out
+
+        return _extract_feature
+
 

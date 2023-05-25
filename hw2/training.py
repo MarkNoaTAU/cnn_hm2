@@ -260,6 +260,8 @@ class TorchTrainer(Trainer):
         pred = self.model(X)
         loss = self.loss_fn(pred, y)
         loss.backward()
+        # for p in self.model.parameters():
+        #     print(p.grad.norm())
         self.optimizer.step()
         self.optimizer.zero_grad()
         output = torch.argmax(pred, dim=1)
