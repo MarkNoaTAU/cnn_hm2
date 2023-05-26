@@ -144,6 +144,45 @@ class ConvClassifier(nn.Module):
         return cls_scores
 
 
+class OurBlock(nn.Module):
+    def __init__(self, in_channels, filters, block_size):
+        super().__init__()
+        self.in_channels = in_channels
+        self.filters = filters
+        self.block_size = block_size
+        self.block_func = OurBlock.init_block(in_channels, filters, block_size)
+        # Unable down-sample to add identy when dimension in_channel != last filter
+        out_channels = filters[-1]
+        if in_channels != out_channels:
+            self.cast_x = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=3, padding=1)
+        else:
+            self.cast_x = None
+        self.relu = nn.ReLU(inplace=True)
+        self.max_pool = nn.MaxPool2d(2)
+
+    @staticmethod
+    def init_block(in_channels, filters, block_size):
+        layers = []
+        for i, f in enumerate(filters):
+            layers.append(nn.Conv2d(in_channels=in_channels, out_channels=f, kernel_size=3, padding=1))
+            layers.append(nn.BatchNorm2d(f))
+            if i + 1 < block_size:
+                layers.append(nn.ReLU())
+            in_channels = f
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        identity = x
+        out = self.block_func(x)
+        if self.cast_x is not None:
+            identity = self.cast_x(x)
+        out += identity
+        out = self.relu(out)
+        # TODO: Potentially add dropout here.
+        out = self.max_pool(out)
+        return out
+
+
 class YourCodeNet(ConvClassifier):
     def __init__(self, in_size, out_classes, filters, pool_every, hidden_dims):
         super().__init__(in_size, out_classes, filters, pool_every, hidden_dims)
@@ -163,68 +202,20 @@ class YourCodeNet(ConvClassifier):
             - Skip-connection
             - Batch Norm
         
+        We will take inspiration from ResNet (torchvision implementation)
+        
         Each block size (between skip-connection) should be according to the size of K and
          the number of block will be set by L.
        
-        # Note: I disabled the pooling currently.
-        
+        # Note: To be able to use the API as is, we will se pool_every = L.
     """
     def _make_feature_extractor(self):
-        # will return a list of Residual-blocks on them, we will iterate.
-        # Note there is no activation function (Relu) in the end of every block.
-
-        # Lets assume pool_every and block_size are equal (if I would have time I would add pulling)
         b_size = self.pool_every
         in_channels, _, _, = tuple(self.in_size)
         blocks = []
 
-        i = 0
-        for b in range(int(len(self.filters) / 2)):
-            # The block: (Conv -> BatchNorm -> ReLU -> Conv -> BatchNorm)
-            layers = []
-            for j in range(b_size):
-                f = self.filters[i]
-                layers.append(nn.Conv2d(in_channels=in_channels, out_channels=f, kernel_size=3, padding=1))
-                layers.append(nn.BatchNorm2d(f))
-                if j + 1 < b_size:
-                    layers.append(nn.ReLU())
-                in_channels = f
-                i += 1
-            blocks.append(nn.Sequential(*layers))
-
-        def _extract_feature(x):
-            out = x
-            first_block = True
-            for i_, func in enumerate(blocks):
-                f_x = func(out)
-                if first_block:
-                    out = f_x
-                    first_block = False
-                else:
-                    if f_x.shape != out.shape:
-                        raise NotImplementedError("Error! Please select the hyperparameter of the model such "
-                                                  "that the residual connection will be in the same size."
-                                                  "In Pytorch, they do support non-equal dimension using 1x1 conv, "
-                                                  "but we currently not. \n")
-                    out = f_x + out
-            return out
-
-        return _extract_feature
-
-    def _make_classifier(self):
-        in_channels, in_h, in_w, = tuple(self.in_size)
-
-        layers = []
-        # (Linear -> ReLU -> Dropout)*M -> Linear
-        # As this time I didn't implement pooling
-        in_dim = in_h * in_w * self.filters[-1]
-
-        for hid_dim in self.hidden_dims:
-            layers.append(nn.Linear(in_dim, hid_dim))
-            layers.append(nn.Dropout(p=0.4))
-            layers.append(nn.ReLU())
-            in_dim = hid_dim
-        layers.append(nn.Linear(in_dim, self.out_classes))
-
-        seq = nn.Sequential(*layers)
-        return seq
+        for b in range(int(len(self.filters) / b_size)):
+            blocks_filter = self.filters[b*b_size: (b+1)*b_size]
+            blocks.append(OurBlock(in_channels=in_channels, filters=blocks_filter, block_size=b_size))
+            in_channels = self.filters[-1]
+        return nn.Sequential(*blocks)
