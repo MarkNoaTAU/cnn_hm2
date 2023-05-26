@@ -201,14 +201,13 @@ class Trainer(abc.ABC):
 
 
 class BlocksTrainer(Trainer):
-    # TODO: Check with Yael what about this class
-
     def __init__(self, model, loss_fn, optimizer):
         super().__init__(model, loss_fn, optimizer)
+
     def train_batch(self, batch) -> BatchResult:
         X, y = batch
 
-        # Train the Block model on one batch of data.
+        # TODO: Train the Block model on one batch of data.
         # - Forward pass
         # - Backward pass
         # - Optimize params
@@ -222,15 +221,16 @@ class BlocksTrainer(Trainer):
         dout = self.loss_fn.backward()
         self.model.backward(dout)
         self.optimizer.step()
-        z = torch.argmax(z,axis=1)
-        num_correct = torch.sum(z == y)
+        z=torch.argmax(z,axis=1)
+        num_correct=torch.sum(z==y)
         # ========================
+
         return BatchResult(loss, num_correct)
 
     def test_batch(self, batch) -> BatchResult:
         X, y = batch
 
-        # Evaluate the Block model on one batch of data.
+        # TODO: Evaluate the Block model on one batch of data.
         # - Forward pass
         # - Calculate number of correct predictions
         # ====== YOUR CODE: ======
@@ -241,6 +241,7 @@ class BlocksTrainer(Trainer):
         # ========================
 
         return BatchResult(loss, num_correct)
+
 
 
 class TorchTrainer(Trainer):

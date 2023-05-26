@@ -70,10 +70,11 @@ class VanillaSGD(Optimizer):
             # TODO: Implement the optimizer step.
             # Update the gradient according to regularization and then
             # update the parameters tensor.
-            # ====== YOUR CODE: ======
-            raise NotImplementedError()
+           # ====== YOUR CODE: ======
+            reg = self.reg * p
+            step=self.learn_rate * (dp + reg) #  *tmp_dp  
+            p-=step 
             # ========================
-
 
 class MomentumSGD(Optimizer):
     def __init__(self, params, learn_rate=1e-3, reg=0, momentum=0.9):
@@ -90,7 +91,11 @@ class MomentumSGD(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.vs = []
+        for p, dp in params:
+            self.vs.append(torch.zeros_like(p))
+        self.ind = 0
+        self.num_params = len(params)
         # ========================
 
     def step(self):
@@ -102,7 +107,12 @@ class MomentumSGD(Optimizer):
             # update the parameters tensor based on the velocity. Don't forget
             # to include the regularization term.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            reg = self.reg * p
+            self.vs[self.ind] = self.momentum * self.vs[self.ind] - self.learn_rate * ( dp + reg )
+            p += self.vs[self.ind]
+            self.ind += 1
+            if self.ind == self.num_params:
+                self.ind = 0
             # ========================
 
 
@@ -123,8 +133,11 @@ class RMSProp(Optimizer):
 
         # TODO: Add your own initializations as needed.
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
-        # ========================
+        self.rs = []
+        for p, dp in params:
+            self.rs.append(torch.zeros_like(p))
+        self.ind = 0
+        self.num_params = len(params)
 
     def step(self):
         for p, dp in self.params:
@@ -136,5 +149,10 @@ class RMSProp(Optimizer):
             # average of it's previous gradients. Use it to update the
             # parameters tensor.
             # ====== YOUR CODE: ======
-            raise NotImplementedError()
+            reg = self.reg * p
+            self.rs[self.ind] = self.decay * self.rs[self.ind] + ( 1 - self.decay ) * ( dp + reg ) * ( dp + reg )
+            p -= ( self.learn_rate / (torch.sqrt(self.rs[self.ind]+self.eps)) ) * ( dp + reg )
+            self.ind += 1
+            if self.ind == self.num_params:
+                self.ind = 0
             # ========================
