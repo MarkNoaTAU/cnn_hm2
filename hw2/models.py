@@ -233,7 +233,7 @@ class YourCodeNet(ConvClassifier):
         for hid_dim in self.hidden_dims:
             layers.append(nn.Linear(in_dim, hid_dim))
             layers.append(nn.ReLU())
-            # layers.append(nn.Dropout(p=0.4))
+            layers.append(nn.Dropout(p=0.4))
             in_dim = hid_dim
         layers.append(nn.Linear(in_dim, self.out_classes))
 
