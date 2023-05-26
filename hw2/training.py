@@ -96,7 +96,7 @@ class Trainer(abc.ABC):
             if early_stopping is not None and epochs_without_improvement > early_stopping:
                 break
             if scheduler is not None:
-                scheduler.step()
+                scheduler.step(test_res.accuracy)
             # ========================
 
         return FitResult(actual_num_epochs,
