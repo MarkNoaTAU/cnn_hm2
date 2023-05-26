@@ -25,7 +25,7 @@ def run_experiment(run_name, out_dir='./results', seed=None,
                    early_stopping=3, checkpoints=None, lr=1e-3, reg=1e-3,
                    # Model params
                    filters_per_layer=[64], layers_per_block=2, pool_every=2,
-                   hidden_dims=[1024], ycn=False, use_scheduler=False,
+                   hidden_dims=[1024], ycn=False, scheduler_step_size=None,
                    **kw):
     """
     Execute a single run of experiment 1 with a single configuration.
@@ -84,8 +84,8 @@ def run_experiment(run_name, out_dir='./results', seed=None,
     else:
         raise ValueError(f"Error! Optimization Algorithm {opt_type} not supported. Only: SGD, Adam or RMSprop")
 
-    if use_scheduler:
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=50, gamma=0.1)
+    if scheduler_step_size is not None:
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=scheduler_step_size, gamma=0.1)
     else:
         scheduler = None
 
