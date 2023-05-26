@@ -85,7 +85,8 @@ def run_experiment(run_name, out_dir='./results', seed=None,
         raise ValueError(f"Error! Optimization Algorithm {opt_type} not supported. Only: SGD, Adam or RMSprop")
 
     if scheduler_step_size is not None:
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=scheduler_step_size, gamma=0.1)
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=scheduler_step_size, gamma=0.1)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=0.1)
     else:
         scheduler = None
 

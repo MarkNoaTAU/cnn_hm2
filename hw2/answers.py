@@ -112,11 +112,9 @@ So as here. To be able to run dipper networks with varying number of filters I h
 
 
 part3_q4 = r"""
-### Question 4 
  ___________________________________________________________________________________________________
 1.  Explain your modifications to the architecture which you implemented in the `YourCodeNet` class:
  ___________________________________________________________________________________________________
- The modifications we made in the architecture:
 In all of the experiments above we saw 
 1. significant over-fitting
 2. dipper network result in the problem of vanishing gradient and hard to train (but solving it may promise better
@@ -128,22 +126,41 @@ Therefore we implemented skip-connection with batch normalization. We took inspi
 
 Each block size (between skip-connection) should be according to the size of K and the number of block will be set by L.
  We only pool in the first & last blocks. 
-The block:
+### The block:
 (Conv -> BatchNorm -> Relu) * block_size + Residual connection (after linear projection to the right dimension) -> Relu.
 (And max pol for the first and last block)
 
 Also, as we observed there is a point where the loss stack - small absolution around some local minim - I decided
-to add implementation of reducing the learning rate during the training.
+to add implementation of scheduler to reduce the learning rate during the training. Honestly, it didn't help as I 
+wished. 
 
-# Note: To be able to use the API as is, we will se pool_every = L.
+Note: To be able to use the API as is, we will se pool_every = L.
 
  ___________________________________________________________________________________________________
 2. Analyze the results of experiment 2. Compare to experiment 1.
  ___________________________________________________________________________________________________
-The first and most important - I was now able to train deeper network. 
-Before I could only run for L=1, while now I got up to 8.
-I was not able to train the model for L=12, I got vanishing gradients again. Maybe I need to add more 
+ 
+The first and most important - we are now able to train deeper network. 
+Before we could only run for L=1, while now I got up to 8.
+We was not able to train the model for L=12, I got vanishing gradients again. Maybe I need to add more 
 skip connection (not just in the blocks but between blocks). Or find other solutions. 
 
+Comparing the impact of depth on the network performance:
+With L=2 we get the best result, which are much better than the previous Cov net implementation (~82% instead of ~68).
+Interesting to see that when we increase L the result is not improving, even due the network still learning. 
+I believe it also due to the fact that I used max batches 100, so we actually use 1/4 of the dataset.
+Maybe if we would use all of the data we could increase the depth and get better accuracy. But the running time was 
+too slow and I didn't have the time to do so.
+
+We can see that the network still over-fit but significantly less (10% difference between train to test compared to 
+25% before). I believe we could reduced it even more using dropout or other solution, but I didn't got to it.
+
+__________________________________________________________________________________________________________
+Selection of Hyperparameter across the experiment: 
+__________________________________________________________________________________________________________
+
+I manually tried different setting; to focus on the main objective we are experimenting on I didn't change the 
+hyperparameter for the specific experiment (aka if we are changing L to measure L effect I left all the 
+hyper-parameter the same while doing so, to avoid noice result).
 
 """
