@@ -59,7 +59,7 @@ class Trainer(abc.ABC):
 
         best_acc = None
         epochs_without_improvement = 0
-
+        scheduler = kw.pop('scheduler', None)
         for epoch in range(num_epochs):
             verbose = False  # pass this to train/test_epoch.
             if epoch % print_every == 0 or epoch == num_epochs-1:
@@ -95,6 +95,8 @@ class Trainer(abc.ABC):
 
             if early_stopping is not None and epochs_without_improvement > early_stopping:
                 break
+            if scheduler is not None:
+                scheduler.step()
             # ========================
 
         return FitResult(actual_num_epochs,
