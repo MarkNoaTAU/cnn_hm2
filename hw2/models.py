@@ -145,7 +145,7 @@ class ConvClassifier(nn.Module):
 
 
 class OurBlock(nn.Module):
-    def __init__(self, in_channels, filters, block_size):
+    def __init__(self, in_channels, filters, block_size, to_pool=True):
         super().__init__()
         self.in_channels = in_channels
         self.filters = filters
@@ -158,7 +158,7 @@ class OurBlock(nn.Module):
         else:
             self.cast_x = None
         self.relu = nn.ReLU(inplace=True)
-        self.max_pool = nn.MaxPool2d(2)
+        self.max_pool = nn.MaxPool2d(2) if to_pool else None
 
     @staticmethod
     def init_block(in_channels, filters, block_size):
@@ -178,8 +178,8 @@ class OurBlock(nn.Module):
             identity = self.cast_x(x)
         out += identity
         out = self.relu(out)
-        # TODO: Potentially add dropout here.
-        out = self.max_pool(out)
+        if self.max_pool is not None:
+            out = self.max_pool(out)
         return out
 
 
@@ -206,16 +206,18 @@ class YourCodeNet(ConvClassifier):
         
         Each block size (between skip-connection) should be according to the size of K and
          the number of block will be set by L.
+        Only pool in the first & last blocks.
        
         # Note: To be able to use the API as is, we will se pool_every = L.
     """
     def _make_feature_extractor(self):
         b_size = self.pool_every
         in_channels, _, _, = tuple(self.in_size)
+        num_blocks = int(len(self.filters) / b_size)
         blocks = []
-
-        for b in range(int(len(self.filters) / b_size)):
+        for b in range(num_blocks):
             blocks_filter = self.filters[b*b_size: (b+1)*b_size]
-            blocks.append(OurBlock(in_channels=in_channels, filters=blocks_filter, block_size=b_size))
+            to_pool = True if b == 0 or b == (num_blocks - 1) else False
+            blocks.append(OurBlock(in_channels=in_channels, filters=blocks_filter, block_size=b_size, to_pool=to_pool))
             in_channels = self.filters[-1]
         return nn.Sequential(*blocks)
