@@ -219,5 +219,24 @@ class YourCodeNet(ConvClassifier):
             blocks_filter = self.filters[b*b_size: (b+1)*b_size]
             to_pool = True if b == 0 or b == (num_blocks - 1) else False
             blocks.append(OurBlock(in_channels=in_channels, filters=blocks_filter, block_size=b_size, to_pool=to_pool))
-            in_channels = self.filters[-1]
+            in_channels = blocks_filter[-1]
         return nn.Sequential(*blocks)
+
+    def _make_classifier(self):
+        in_channels, in_h, in_w, = tuple(self.in_size)
+
+        layers = []
+        number_of_pooling = min(int(len(self.filters) / self.pool_every), 2)
+        f_h, f_w, f_c = in_h / (2 ** number_of_pooling), in_w / (2 ** number_of_pooling), self.filters[-1]
+        in_dim = int(f_h * f_w * f_c)
+
+        for hid_dim in self.hidden_dims:
+            layers.append(nn.Linear(in_dim, hid_dim))
+            layers.append(nn.ReLU())
+            # layers.append(nn.Dropout(p=0.4))
+            in_dim = hid_dim
+        layers.append(nn.Linear(in_dim, self.out_classes))
+
+        seq = nn.Sequential(*layers)
+        return seq
+
